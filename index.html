@@ -7,6 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lab 9</title>
 
+  <script src="https://cdn.trackjs.com/agent/v3/latest/t.js"></script>
+  <script>
+    window.TrackJS && TrackJS.install({ 
+      token: "21ff4bd3e3974ce9afb5e5a710561f43"
+      // for more configuration options, see https://docs.trackjs.com
+    });
+  </script>
+
   <style>
     button {
       margin: 3px;
@@ -88,6 +96,33 @@
   </main>
 
   <script>
+    // ============================================
+    // Custom Error Class
+    // ============================================
+    class CalculationError extends Error {
+      constructor(message, operator) {
+        super(message);
+        this.name = 'CalculationError';
+        this.operator = operator;
+        this.timestamp = new Date();
+      }
+
+      toString() {
+        return `${this.name}: ${this.message} (Operator: ${this.operator}) at ${this.timestamp.toLocaleTimeString()}`;
+      }
+    }
+
+    class ValidationError extends Error {
+      constructor(message, field) {
+        super(message);
+        this.name = 'ValidationError';
+        this.field = field;
+      }
+    }
+
+    // ============================================
+    // Calculator with Error Handling
+    // ============================================
     let form = document.querySelector('form');
     form.addEventListener('submit', e => {
       e.preventDefault();
@@ -95,13 +130,185 @@
       let firstNum = document.querySelector('#first-num').value;
       let secondNum = document.querySelector('#second-num').value;
       let operator = document.querySelector('#operator').value;
-      output.innerHTML = eval(`${firstNum} ${operator} ${secondNum}`);
+
+      try {
+        // Validate inputs
+        if (firstNum === '' || secondNum === '') {
+          throw new ValidationError('Input fields cannot be empty', 'input');
+        }
+
+        let num1 = parseFloat(firstNum);
+        let num2 = parseFloat(secondNum);
+
+        if (isNaN(num1) || isNaN(num2)) {
+          throw new ValidationError('Inputs must be valid numbers', 'number-format');
+        }
+
+        // Check for division by zero
+        if (operator === '/' && num2 === 0) {
+          throw new CalculationError('Cannot divide by zero', '/');
+        }
+
+        // Perform calculation
+        let result = eval(`${num1} ${operator} ${num2}`);
+        output.innerHTML = result;
+        console.log(`Calculation successful: ${num1} ${operator} ${num2} = ${result}`);
+
+      } catch (error) {
+        if (error instanceof ValidationError) {
+          console.error('Validation Error:', error.message, `Field: ${error.field}`);
+          output.innerHTML = `Error: ${error.message}`;
+        } else if (error instanceof CalculationError) {
+          console.error('Calculation Error:', error.toString());
+          output.innerHTML = `Error: ${error.message}`;
+        } else {
+          console.error('Unexpected Error:', error);
+          output.innerHTML = 'An unexpected error occurred';
+        }
+      } finally {
+        console.log('Calculator operation completed');
+      }
     });
 
-    let errorBtns = Array.from(document.querySelectorAll('#error-btns > button'));
+    // ============================================
+    // Global Error Handler
+    // ============================================
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error('Global Error Caught:');
+      console.error(`Message: ${message}`);
+      console.error(`Source: ${source}`);
+      console.error(`Line: ${lineno}, Column: ${colno}`);
+      if (error) {
+        console.error(`Error Object:`, error);
+      }
+      
+      // Log to console that the global error handler is working
+      console.log('✓ Global error handler successfully intercepted the error!');
+      
+      // In a real application, you could send this to a server here
+      // Example: sendErrorToServer({message, source, lineno, colno, error: error?.stack});
+      
+      // Return true to prevent default error handling
+      return true;
+    };
 
-    // Start your code here
-    // You may move this JS to another file if you wish
+    // ============================================
+    // Console Methods Demonstrations
+    // ============================================
+    let errorBtns = Array.from(document.querySelectorAll('#error-btns > button'));
+    let groupOpen = false;
+    let timerName = 'demo-timer';
+
+    // Sample data for demonstrations
+    const sampleData = {
+      name: 'Lab 9 Demo',
+      type: 'Educational Example',
+      methods: ['log', 'error', 'table', 'dir', 'dirxml', 'group', 'trace', 'time'],
+      details: {
+        timestamp: new Date(),
+        duration: '~5 minutes'
+      }
+    };
+
+    const sampleArray = [
+      { id: 1, method: 'console.log', description: 'Basic logging' },
+      { id: 2, method: 'console.error', description: 'Error messages' },
+      { id: 3, method: 'console.table', description: 'Tabular data' },
+      { id: 4, method: 'console.dir', description: 'Object properties' }
+    ];
+
+    // Function to trigger a real global error
+    function triggerGlobalError() {
+      // This will cause an actual runtime error that won't be caught by try/catch
+      // unless explicitly caught by the global error handler
+      nonExistentFunction();
+    }
+
+    // Button click handlers
+    errorBtns.forEach((button, index) => {
+      button.addEventListener('click', () => {
+        switch (index) {
+          case 0: // Console Log
+            console.log('This is a basic log message!');
+            console.log('Sample object:', sampleData);
+            console.log('Current time:', new Date().toLocaleString());
+            break;
+
+          case 1: // Console Error
+            console.error('This is an error message!');
+            console.error('Error details:', new Error('Sample error for demonstration').stack);
+            break;
+
+          case 2: // Console Count
+            console.count('button-click');
+            break;
+
+          case 3: // Console Warn
+            console.warn('This is a warning message!');
+            console.warn('Warning: Make sure to check your inputs');
+            break;
+
+          case 4: // Console Assert
+            console.assert(1 + 1 === 2, 'Math is broken!');
+            console.assert(5 > 10, 'This assertion fails: 5 is not greater than 10');
+            break;
+
+          case 5: // Console Clear
+            console.clear();
+            break;
+
+          case 6: // Console Dir
+            console.dir(sampleData);
+            break;
+
+          case 7: // Console dirxml
+            let element = document.querySelector('form');
+            console.dirxml(element);
+            break;
+
+          case 8: // Console Group Start
+            if (!groupOpen) {
+              console.group('Grouped Console Messages');
+              console.log('This is the first message in the group');
+              console.log('This is the second message in the group');
+              groupOpen = true;
+            }
+            break;
+
+          case 9: // Console Group End
+            if (groupOpen) {
+              console.log('This is the last message in the group');
+              console.groupEnd();
+              groupOpen = false;
+            }
+            break;
+
+          case 10: // Console Table
+            console.table(sampleArray);
+            break;
+
+          case 11: // Start Timer
+            console.time(timerName);
+            console.log(`Timer "${timerName}" started`);
+            break;
+
+          case 12: // End Timer
+            console.timeEnd(timerName);
+            break;
+
+          case 13: // Console Trace
+            console.trace('Stack trace demonstration');
+            break;
+
+          case 14: // Trigger a Global Error
+            // This will trigger an actual global error (not caught by try/catch)
+            // which will be caught by window.onerror handler
+            console.log('About to trigger a global error...');
+            triggerGlobalError();
+            break;
+        }
+      });
+    });
   </script>
 </body>
 
